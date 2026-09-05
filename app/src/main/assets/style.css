@@ -3,6 +3,15 @@
 body { margin: 0; user-select: none; }
 main { max-width: 820px; margin: auto; padding: 18px 20px 20px; }
 header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+header > div { flex: 1; min-width: 0; }
+#edit-part { width: 88px; flex: 0 0 88px; margin: 0 8px; font-size: 12px; }
+.part-head, .part-row { display: grid; grid-template-columns: 32px minmax(0,1fr) 38px; gap: 8px; align-items: center; font-size: 12px; }
+.part-head { color: #b3c3b6; padding: 6px 0; }
+.part-row { min-height: 42px; border-top: 1px solid #333f36; }
+.part-row select { height: 34px; width: 100%; font-size: 12px; }
+.part-row.selected { color: #63e3a2; }
+.part-row input { justify-self: center; }
+.mix-controls { grid-template-columns: 1fr 1fr !important; margin-bottom: 4px; }
 h1 { font-size: 25px; font-weight: 650; margin: 2px 0 0; line-height: 1.2; }
 .brand-mark { color: #63e3a2; font: 11px monospace; }
 button, select, input { font: inherit; }

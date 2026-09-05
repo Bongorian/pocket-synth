@@ -2,21 +2,15 @@
 const synth = new SynthEngine();
 const $ = id => document.getElementById(id);
 const defaults = { ...synth.params };
-const factory = {
-  'Warm Keys': {},
-  'Round Bass': { wave: 'square', cutoff: 680, detune: 3, sub: 0.6, attack: 0.008, decay: 0.16, sustain: 0.45, release: 0.12, mix: 0 },
-  'Glass Pluck': { wave: 'triangle', cutoff: 6200, detune: 12, attack: 0.004, decay: 0.45, sustain: 0, release: 0.15, mix: 0.3, feedback: 0.4 },
-  'Slow Pad': { cutoff: 1700, detune: 18, attack: 0.8, decay: 0.6, sustain: 0.75, release: 1.5, mix: 0.3, lfoRate: 0.8, lfoDepth: 8 },
-  'Bright Lead': { cutoff: 5500, resonance: 3, detune: 6, attack: 0.01, decay: 0.18, sustain: 0.8, release: 0.2, mix: 0.22, lfoDepth: 12 },
-  'Pure Sine': { wave: 'sine', cutoff: 12000, detune: 0, sub: 0, attack: 0.01, mix: 0 },
-  'FM Electric': { mode: 'fm', fmRatio: 1, fmIndex: 3.5, fmDecay: .5, cutoff: 9500, sub: 0, detune: 0, decay: .9, sustain: .2, release: .5 },
-  'FM Steel': { mode: 'fm', fmRatio: 3.5, fmIndex: 6, fmDecay: .7, cutoff: 12000, sub: 0, decay: 1.5, sustain: .1, release: 1.2, mix: .28 },
-  'FM Growl': { mode: 'fm', fmRatio: .5, fmIndex: 8, fmDecay: .2, cutoff: 3200, drive: 2, sub: .45, release: .12 },
-  'Morph Sweep': { mode: 'wavetable', table: 'basic', position: .65, detune: 20, cutoff: 6500, attack: .15, release: .8, mix: .25 },
-  'Vocal Cloud': { mode: 'wavetable', table: 'vocal', position: .45, detune: 14, cutoff: 11000, attack: .6, release: 1.6, mix: .35 },
-  'Metal Edge': { mode: 'wavetable', table: 'metal', position: .7, detune: 7, cutoff: 7000, drive: 1.5, mix: .18 }
-};
+const factory = window.FACTORY_PRESETS;
 const specs = {
+  harmonics: ['synthesis', 'Harmonics', 1, 32, 1, v => String(Math.round(v))],
+  tilt: ['synthesis', 'Harmonic Tilt', .3, 3, .05, v => v.toFixed(2)],
+  even: ['synthesis', 'Even Harmonics', 0, 1, .01, percent],
+  ringRatio: ['synthesis', 'Ring Ratio', .125, 12, .125, v => v.toFixed(3)],
+  ringMix: ['synthesis', 'Ring Mix', 0, 1, .01, percent],
+  drumTone: ['synthesis', 'Drum Tune', -12, 12, 1, v => v + ' st'],
+  drumDecay: ['synthesis', 'Drum Decay', .3, 2, .05, v => v.toFixed(2) + 'x'],
   fmRatio: ['synthesis', 'FM Ratio', .25, 12, .25, v => v.toFixed(2)],
   fmIndex: ['synthesis', 'FM Index', 0, 12, .1, v => v.toFixed(1)],
   fmDecay: ['synthesis', 'FM Decay', .01, 3, .01, seconds, true],
@@ -47,7 +41,8 @@ function validPatch(raw) {
   if (!raw || typeof raw !== 'object') return null;
   const p = { ...defaults };
   if (['sine', 'triangle', 'sawtooth', 'square'].includes(raw.wave)) p.wave = raw.wave;
-  if (['analog', 'fm', 'wavetable'].includes(raw.mode)) p.mode = raw.mode;
+  if (['analog', 'fm', 'wavetable', 'additive', 'ring', 'drums'].includes(raw.mode)) p.mode = raw.mode;
+  if (['electro','deep','dust'].includes(raw.kit)) p.kit=raw.kit;
   if (['basic', 'vocal', 'metal'].includes(raw.table)) p.table = raw.table;
   for (const [id, s] of Object.entries(specs)) {
     if (typeof raw[id] === 'number' && Number.isFinite(raw[id])) p[id] = Math.max(s[2], Math.min(s[3], raw[id]));
@@ -56,12 +51,58 @@ function validPatch(raw) {
 }
 try {
   const data = JSON.parse(localStorage.getItem('pocket-synth-users') || '{}');
-  for (let i = 1; i <= 4; i++) { const p = validPatch(data?.['User ' + i]); if (p) users['User ' + i] = p; }
+  for (let i = 1; i <= 16; i++) { const p = validPatch(data?.['User ' + i]); if (p) users['User ' + i] = p; }
 } catch (_) {}
+for(const id of ['mode','synth-mode']) for(const [value,name] of [['additive','Additive'],['ring','Ring Mod'],['drums','Drum Kit']]) {
+  const o=document.createElement('option');o.value=value;o.textContent=name;$(id).append(o);
+}
+for(let i=5;i<=16;i++){const o=document.createElement('option');o.value=i;o.textContent='User '+i;$('slot').append(o);}
+let persistTimer;
+function persistParts() {
+  clearTimeout(persistTimer);
+  try { localStorage.setItem('pocket-synth-parts-v3',JSON.stringify({selected:synth.selectedPart,volume:Number($('volume').value),
+    parts:synth.parts.map(p=>({patch:p.params,name:p.name,level:p.level,pan:p.pan,mute:p.mute,modified:!!p.modified}))})); }
+  catch(_){$('status').textContent='保存できません';}
+}
+function schedulePersist(){clearTimeout(persistTimer);persistTimer=setTimeout(persistParts,180);}
+synth.setPatch(9,factory['Electro Kit'],'Electro Kit');
+try{
+  const saved=JSON.parse(localStorage.getItem('pocket-synth-parts-v3')||'null');
+  if(saved&&Array.isArray(saved.parts)){
+    saved.parts.slice(0,16).forEach((raw,i)=>{
+      const patch=validPatch(raw?.patch);if(!patch)return;
+      const name=typeof raw.name==='string'&&(raw.name in factory||raw.name in users)?raw.name:'Warm Keys';
+      synth.setPatch(i,patch,name);synth.parts[i].modified=Boolean(raw.modified);
+      synth.mixer(i,{level:Number.isFinite(raw.level)?raw.level:1,pan:Number.isFinite(raw.pan)?raw.pan:0,mute:raw.mute===true});
+    });
+    if(Number.isInteger(saved.selected)&&saved.selected>=0&&saved.selected<16)synth.selectPart(saved.selected);
+    if(Number.isFinite(saved.volume)){$('volume').value=Math.max(0,Math.min(.8,saved.volume));synth.update({volume:Number($('volume').value)});}
+  }
+}catch(_){}
+basePreset=synth.parts[synth.selectedPart].name;
+for(let i=0;i<16;i++){
+  const option=document.createElement('option');option.value=i;option.textContent='Ch '+(i+1);$('edit-part').append(option);
+  const row=document.createElement('div');row.className='part-row';row.dataset.part=i;
+  const label=document.createElement('span');label.textContent=String(i+1).padStart(2,'0');
+  const select=document.createElement('select');select.dataset.patch=i;select.setAttribute('aria-label','Ch '+(i+1)+' 音色');
+  select.onchange=()=>assignPatch(i,select.value);
+  const mute=document.createElement('input');mute.type='checkbox';mute.dataset.mute=i;mute.setAttribute('aria-label','Ch '+(i+1)+' Mute');
+  mute.onchange=()=>{synth.mixer(i,{mute:mute.checked});schedulePersist();};
+  row.append(label,select,mute);$('part-list').append(row);
+}
+function presetOptions(){return [...Object.keys(factory),...Object.keys(users)].map(name=>{const o=document.createElement('option');o.value=name;o.textContent=name;return o;});}
+function partRows(){
+  document.querySelectorAll('[data-patch]').forEach(select=>{
+    const part=synth.parts[Number(select.dataset.patch)];select.replaceChildren(...presetOptions());select.value=part.name;
+    if(part.modified&&select.selectedOptions[0])select.selectedOptions[0].textContent+=' *';
+  });
+  document.querySelectorAll('[data-mute]').forEach(m=>m.checked=synth.parts[Number(m.dataset.mute)].mute);
+  document.querySelectorAll('.part-row').forEach(r=>r.classList.toggle('selected',Number(r.dataset.part)===synth.selectedPart));
+}
 function options() {
-  $('preset').replaceChildren(...[...Object.keys(factory), ...Object.keys(users)].map(name => {
-    const o = document.createElement('option'); o.value = name; o.textContent = name; return o;
-  }));
+  $('preset').replaceChildren(...presetOptions());$('preset').value=synth.parts[synth.selectedPart].name;
+  if(synth.parts[synth.selectedPart].modified&&$('preset').selectedOptions[0])$('preset').selectedOptions[0].textContent+=' *';
+  partRows();
 }
 options();
 for (const [id, s] of Object.entries(specs)) {
@@ -81,31 +122,55 @@ function sync() {
   }
   $('wave').value = synth.params.wave;
   $('mode').value = synth.params.mode; $('table').value = synth.params.table;
-  $('wave').disabled = synth.params.mode !== 'analog';
+  $('wave').disabled = !['analog','ring'].includes(synth.params.mode);
   $('synth-mode').value = synth.params.mode;
   for (const id of ['fmRatio', 'fmIndex', 'fmDecay']) $(id).disabled = synth.params.mode !== 'fm';
   $('table').disabled = $('position').disabled = synth.params.mode !== 'wavetable';
+  const groups={fm:['fmRatio','fmIndex','fmDecay'],wavetable:['position'],additive:['harmonics','tilt','even'],ring:['ringRatio','ringMix'],drums:['drumTone','drumDecay']};
+  for(const [mode,ids] of Object.entries(groups))for(const id of ids)$(id).closest('.control').hidden=synth.params.mode!==mode;
+  $('table').hidden=synth.params.mode==='drums';$('kit').hidden=synth.params.mode!=='drums';$('kit').value=synth.params.kit;
+  const part=synth.parts[synth.selectedPart];$('edit-part').value=synth.selectedPart;
+  $('part-level').value=part.level;$('part-level-out').textContent=percent(part.level);
+  $('part-pan').value=part.pan;$('part-pan-out').textContent=part.pan===0?'C':(part.pan<0?'L ':'R ')+Math.round(Math.abs(part.pan)*100);
+  for(const id of ['detune','sub','attack','decay','sustain','release','lfoRate','lfoDepth'])$(id).disabled=synth.params.mode==='drums';
 }
 function markModified() {
   modified = true;
+  synth.parts[synth.selectedPart].modified=true;
   $('preset').selectedOptions[0].textContent = basePreset + ' *';
+  const row=document.querySelector('[data-patch="'+synth.selectedPart+'"]');
+  if(row?.selectedOptions[0])row.selectedOptions[0].textContent=basePreset+' *';
+  schedulePersist();
 }
 $('wave').onchange = () => { synth.update({ wave: $('wave').value }); markModified(); };
-$('mode').onchange = () => { panic(); synth.update({ mode: $('mode').value }); sync(); markModified(); };
+$('mode').onchange = () => { stopEditedPart(); synth.update({ mode: $('mode').value }); sync(); markModified(); if(synth.params.mode==='drums')setOctave(2);else buildKeyboard(); };
 $('synth-mode').onchange = () => { $('mode').value = $('synth-mode').value; $('mode').onchange(); };
 $('table').onchange = () => { synth.update({ table: $('table').value }); markModified(); };
-$('volume').oninput = () => synth.update({ volume: Number($('volume').value) });
-$('preset').onchange = () => {
-  panic(); basePreset = $('preset').value; modified = false;
-  synth.update({ ...defaults, ...(users[basePreset] || factory[basePreset]), volume: Number($('volume').value) });
-  options(); $('preset').value = basePreset; sync();
+$('kit').onchange=()=>{synth.update({kit:$('kit').value});markModified();};
+$('volume').oninput = () => {synth.update({ volume: Number($('volume').value) });schedulePersist();};
+function releaseLocal(){space=false;$('hold').checked=false;for(const id of [...held.keys()])release(id);releaseSustain();downKeys.clear();pointers.clear();}
+function stopEditedPart(){releaseLocal();window.midiController?.clearChannel(synth.selectedPart);synth.stopPart(synth.selectedPart);}
+function assignPatch(index,name){
+  const patch=users[name]||factory[name];if(!patch)return;
+  if(index===synth.selectedPart)releaseLocal();
+  window.midiController?.clearChannel(index);synth.setPatch(index,patch,name);synth.parts[index].modified=false;
+  if(index===synth.selectedPart){basePreset=name;modified=false;sync();if(synth.params.mode==='drums')setOctave(2);else buildKeyboard();}
+  options();paintKeys();schedulePersist();
+}
+$('preset').onchange=()=>assignPatch(synth.selectedPart,$('preset').value);
+$('edit-part').onchange=()=>{
+  releaseLocal();synth.selectPart(Number($('edit-part').value));basePreset=synth.parts[synth.selectedPart].name;
+  modified=!!synth.parts[synth.selectedPart].modified;options();sync();
+  if(synth.params.mode==='drums')setOctave(2);else buildKeyboard();paintKeys();schedulePersist();
 };
+for(const [id,property] of [['part-level','level'],['part-pan','pan']])$(id).oninput=()=>{synth.mixer(synth.selectedPart,{[property]:Number($(id).value)});sync();schedulePersist();};
 $('save').onclick = () => {
   const name = 'User ' + $('slot').value;
   const updated = { ...users, [name]: { ...synth.params } };
   try {
     localStorage.setItem('pocket-synth-users', JSON.stringify(updated));
-    users = updated; options(); $('preset').value = name; basePreset = name; modified = false;
+    users = updated; synth.parts[synth.selectedPart].name=name;synth.parts[synth.selectedPart].modified=false;
+    options(); $('preset').value = name; basePreset = name; modified = false;persistParts();
     $('status').textContent = 'SAVED';
   } catch (_) { $('status').textContent = '保存できません'; }
 };
@@ -116,10 +181,10 @@ document.querySelectorAll('[data-tab]').forEach(button => {
   };
 });
 function paintKeys() {
-  const sounding = new Set([...synth.voices.values()].map(v => v.midi));
+  const sounding = new Set([...synth.voices.values()].filter(v=>v.part===synth.selectedPart).map(v => v.midi));
   document.querySelectorAll('.key').forEach(k => k.classList.toggle('active', sounding.has(Number(k.dataset.midi))));
   $('note').textContent = [...sounding].map(noteName).join(' ') || 'READY';
-  $('status').textContent = sounding.size + ' / 8';
+  $('status').textContent = synth.voices.size + ' / ' + synth.maxVoices;
 }
 function press(id, midi) {
   if (held.has(id)) return;
@@ -163,7 +228,10 @@ function buildKeyboard() {
     const k = document.createElement('button'), white = whites.includes(n), midi = 12 * (octave + 1) + n;
     k.className = 'key ' + (white ? 'white' : 'black'); k.dataset.midi = midi; k.tabIndex = -1;
     k.setAttribute('aria-label', noteName(midi));
-    k.innerHTML = Object.keys(keyMap).find(key => keyMap[key] === n).toUpperCase() + '<small>' + noteName(midi) + '</small>';
+    const drumNames={36:'Kick',37:'Rim',38:'Snare',39:'Clap',40:'Snare',41:'Tom',42:'CHat',43:'Tom',44:'PHat',45:'Tom',46:'OHat',47:'Tom',48:'Tom',49:'Crash',50:'Tom'};
+    const name=synth.params.mode==='drums'?(drumNames[midi]||SynthEngine.drumGroup(midi)):noteName(midi);
+    k.setAttribute('aria-label',synth.params.mode==='drums'?name+' '+noteName(midi):name);
+    k.innerHTML = Object.keys(keyMap).find(key => keyMap[key] === n).toUpperCase() + '<small>' + name + '</small>';
     if (!white) k.style.left = (whites.filter(w => w < n).length / 9 * 100 - 3.5) + '%';
     k.addEventListener('click', e => { if (e.detail === 0) { const id = 'accessible-' + midi; press(id, midi); setTimeout(() => release(id), 250); } });
     $('keyboard').append(k);
@@ -213,6 +281,7 @@ window.synthSuspend = () => { panic(); if (synth.ctx?.state === 'running') synth
 window.backgroundMode = false;
 window.nativeForeground = true;
 function background() {
+  persistParts();
   if (!window.backgroundMode) { window.synthSuspend(); return; }
   space = false; $('hold').checked = false;
   for (const id of [...held.keys()]) release(id);
@@ -223,10 +292,10 @@ window.synthSetForeground = value => { window.nativeForeground = value; if (!val
 document.addEventListener('visibilitychange', () => { if (document.hidden) background(); });
 window.midiController = new MidiController(synth, () => {
   paintKeys(); $('midi-count').textContent = window.midiController.events + ' EVENTS';
-}, number => {
+}, (number, channel) => {
   if (!$('midi-program').checked) return;
   const name = Object.keys(factory)[number];
-  if (name) { $('preset').value = name; $('preset').onchange(); }
+  if (name) assignPatch(channel,name);
 });
 for (let n = 0; n < 16; n++) {
   const o = document.createElement('option'); o.value = n; o.textContent = n + 1; $('midi-channel').append(o);
@@ -272,4 +341,5 @@ function draw(now) {
   }
   pen.stroke();
 }
-sync(); setOctave(3); requestAnimationFrame(draw);
+synth.onVoiceEnded=()=>{if(!document.hidden&&window.nativeForeground)paintKeys();};
+sync(); setOctave(synth.params.mode==='drums'?2:3); requestAnimationFrame(draw);

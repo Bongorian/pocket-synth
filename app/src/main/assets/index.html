@@ -9,21 +9,28 @@
 </head>
 <body>
 <main>
-  <header><div><span class="brand-mark">PS / 01</span><h1>Pocket Synth</h1></div><button id="panic" class="icon danger" title="全音停止 (Esc)" aria-label="全音停止"><img src="icons/square.svg" alt=""></button></header>
+  <header><div><span class="brand-mark">PS / 03</span><h1>Pocket Synth</h1></div><select id="edit-part" aria-label="編集・演奏チャンネル"></select><button id="panic" class="icon danger" title="全音停止 (Esc)" aria-label="全音停止"><img src="icons/square.svg" alt=""></button></header>
   <section class="patchbar" aria-label="音色">
     <select id="preset" aria-label="音色"></select>
     <select id="slot" aria-label="保存先"><option value="1">User 1</option><option value="2">User 2</option><option value="3">User 3</option><option value="4">User 4</option></select>
     <button id="save" class="icon" title="音色を保存" aria-label="音色を保存"><img src="icons/save.svg" alt=""></button>
   </section>
-  <section class="monitor" aria-label="波形モニター"><canvas id="scope"></canvas><div class="readout"><span id="note">READY</span><span id="status" role="status">8 VOICES</span></div></section>
-  <nav class="tabs" aria-label="音色編集"><button data-tab="tone" aria-selected="true" role="tab">音源</button><button data-tab="synthesis" aria-selected="false" role="tab">FM / WT</button><button data-tab="env" aria-selected="false" role="tab">ADSR</button><button data-tab="fx" aria-selected="false" role="tab">FX</button><button data-tab="midi" aria-selected="false" role="tab">MIDI</button></nav>
+  <section class="monitor" aria-label="波形モニター"><canvas id="scope"></canvas><div class="readout"><span id="note">READY</span><span id="status" role="status">16 VOICES</span></div></section>
+  <nav class="tabs" aria-label="音色編集"><button data-tab="tone" aria-selected="true" role="tab">音源</button><button data-tab="synthesis" aria-selected="false" role="tab">合成</button><button data-tab="env" aria-selected="false" role="tab">ADSR</button><button data-tab="fx" aria-selected="false" role="tab">FX</button><button data-tab="parts" aria-selected="false" role="tab">Parts</button><button data-tab="midi" aria-selected="false" role="tab">MIDI</button></nav>
   <section id="tone" class="panel" role="tabpanel">
     <div class="wave-line"><select id="mode" aria-label="合成方式"><option value="analog">Analog</option><option value="fm">FM</option><option value="wavetable">Wavetable</option></select><select id="wave" aria-label="波形"><option value="sawtooth">Saw</option><option value="square">Square</option><option value="triangle">Triangle</option><option value="sine">Sine</option></select></div>
     <div class="controls" id="tone-controls"></div>
   </section>
-  <section id="synthesis" class="panel" role="tabpanel" hidden><div class="wave-line"><select id="synth-mode" aria-label="合成方式"><option value="analog">Analog</option><option value="fm">FM</option><option value="wavetable">Wavetable</option></select><select id="table" aria-label="ウェーブテーブル"><option value="basic">Basic Morph</option><option value="vocal">Vocal</option><option value="metal">Metal</option></select></div><div class="controls" id="synthesis-controls"></div></section>
+  <section id="synthesis" class="panel" role="tabpanel" hidden><div class="wave-line"><select id="synth-mode" aria-label="合成方式"><option value="analog">Analog</option><option value="fm">FM</option><option value="wavetable">Wavetable</option></select><select id="table" aria-label="ウェーブテーブル"><option value="basic">Basic Morph</option><option value="vocal">Vocal</option><option value="metal">Metal</option></select><select id="kit" aria-label="ドラムキット" hidden><option value="electro">Electro</option><option value="deep">Deep</option><option value="dust">Dust</option></select></div><div class="controls" id="synthesis-controls"></div></section>
   <section id="env" class="panel" role="tabpanel" hidden><div class="controls" id="env-controls"></div></section>
   <section id="fx" class="panel" role="tabpanel" hidden><div class="controls" id="fx-controls"></div></section>
+  <section id="parts" class="panel" role="tabpanel" hidden>
+    <div class="controls mix-controls">
+      <label class="control"><span class="control-head"><span>Part Level</span><output id="part-level-out">100%</output></span><input id="part-level" type="range" min="0" max="1.5" value="1" step=".01"></label>
+      <label class="control"><span class="control-head"><span>Pan</span><output id="part-pan-out">C</output></span><input id="part-pan" type="range" min="-1" max="1" value="0" step=".01"></label>
+    </div>
+    <div class="part-head"><span>Ch</span><span>音色</span><span>Mute</span></div><div id="part-list"></div>
+  </section>
   <section id="midi" class="panel" role="tabpanel" hidden>
     <div class="midi-row"><label class="hold"><input type="checkbox" id="midi-enabled">MIDI受信</label><span id="midi-status" role="status">OFF</span></div>
     <div class="midi-row"><label for="midi-source">入力</label><select id="midi-source"><option value="auto">USB自動 + アプリ入力</option></select></div>
@@ -35,5 +42,5 @@
     <div id="keyboard" aria-label="鍵盤"></div>
   </section>
 </main>
-<script src="engine.js"></script><script src="midi.js"></script><script src="app.js"></script>
+<script src="engine.js"></script><script src="presets.js"></script><script src="midi.js"></script><script src="app.js"></script>
 </body></html>

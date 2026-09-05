@@ -27,7 +27,7 @@ const path = require('node:path');
     assert.equal((await state()).voices, 1);
     await page.locator('#hold').uncheck(); assert.equal((await state()).voices, 0);
     for (const key of Object.keys({a:0,w:0,s:0,e:0,d:0,f:0,t:0,g:0,y:0,h:0})) await page.keyboard.down(key);
-    assert.equal((await state()).live, 8);
+    assert.ok((await state()).live >= 10 && (await state()).live <= 16);
     await page.keyboard.press('Escape'); assert.equal((await state()).live, 0);
     for (const key of ['a','w','s','e','d','f','t','g','y','h']) await page.keyboard.up(key);
     await page.locator('#wave').selectOption('square');
