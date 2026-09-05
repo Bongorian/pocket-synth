@@ -1,0 +1,13 @@
+.gradle/
+**/build/
+tools/node_modules/
+verification/*.png
+verification/*.xml
+verification/framer/
+local.properties
+*.apk
+*.aab
+*.jks
+*.keystore
+.env
+.env.*
