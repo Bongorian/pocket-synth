@@ -1,7 +1,7 @@
 # Pocket Synth
 
 Offline Android synthesizer for Titan Slim, with a standalone browser version.
-Version 3 provides 16 MIDI parts, 16 shared voices, 39 factory presets and 16
+Version 4 provides 16 MIDI parts, 16 shared voices, 39 factory presets and 16
 persistent user slots. Engines: subtractive, two-operator FM, morphable wavetable,
 additive, ring modulation and three synthesized drum kits. Each part has its own
 patch, filter, ADSR, vibrato, drive, delay, level, pan and mute; master volume and
@@ -15,7 +15,7 @@ Audio uses the browser's native Web Audio nodes.
 - Space: momentary sustain pedal. Hold: latched sustain.
 - Esc or the red square: stop all voices and clear delay.
 - Hardware volume buttons: Android media volume.
-- Save icon: overwrite the selected User 1-16 slot with the current patch.
+- Save icon: choose a User 1-16 slot and a sound name; occupied slots show an overwrite action.
 - Header Ch selector: choose the part to edit and play with touch/physical keys.
 - Parts tab: assign sounds to all 16 channels; edit selected part level/pan and mute any part.
 - Touch supports multiple fingers and sliding between keys.
@@ -36,6 +36,10 @@ served entirely from bundled assets; it does not run a server.
 Run `./gradlew --offline --no-daemon assembleDebug` with the device's installed
 JDK 21, SDK 34, Gradle 8.10.2 and Debian ARM64 AAPT2. Output:
 `app/build/outputs/apk/debug/app-debug.apk`.
+
+The debug build uses `~/.config/.android/debug.keystore` when present to preserve
+the installed app's signing identity. Override with
+`-PpocketDebugKeystore=/path/to/debug.keystore`; no signing key is stored in Git.
 
 References: https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API
 and https://developer.android.com/develop/ui/views/layout/webapps/webview
@@ -101,3 +105,30 @@ service background playback and drum layout; restores the previous part settings
 a MIDI operator, checks app-to-app MIDI, background FM samples and note release.
 USB hardware has not been attached for an end-to-end test.
 Orca integration was verified for v2; the v3 update does not repeat that test.
+
+## Version 4: Studio And Live Controls
+
+- Fixed keyboard and performance controls with a compact portrait layout and a separate landscape arrangement.
+- Sound Library with text search, engine filtering, favorites and previous/next patch buttons.
+- Named User 1-16 sounds. Existing v3 sounds and part assignments remain readable.
+- Per-part patch Undo/Redo (24 edits, current session) and A/B comparison. Comparing within one engine updates sounding voices; changing engines releases that part.
+- LIVE: filter/resonance XY control with logarithmic frequency, plus envelope controls or drum tune/decay.
+- Spring-return local pitch bend (+/-2 semitones), modulation and local-note velocity. MIDI input velocity and bend remain independent. Bend/Mod reset on part changes and leaving the app.
+- Sixteen touch drum pads for drum patches; physical keys retain their original chromatic mapping.
+- Part Solo, one-touch part selection and note activity indicators. Solo is temporary and preserves saved mute settings.
+- Native Android document picker for JSON bank export/import. Backups include all 16 parts, user sounds/names, favorites and master volume. Restore validates the bank and asks before replacing data.
+- Native keyboard input remains available in search/name dialogs, instead of triggering notes.
+
+The app has no arpeggiator or external clock sync. XY edits the current patch;
+it does not override an external MIDI CC74 cutoff value already assigned to a voice.
+Solo suppresses new notes on other parts; it does not retrigger held notes when released.
+Patch Undo does not undo bank restore or changes to saved user slots.
+
+`node tools/verify-v4.cjs` is the focused v4 check: six engine renders, solo and
+performance control isolation, patch browser, XY, undo/redo, A/B, named save/reload,
+backup restore/reload, and four viewport layouts including landscape and drum pads.
+Earlier UI verification scripts target their original versions' controls.
+V4 passed this focused check and was installed over the existing Android app;
+native startup confirmed v4, 16 parts, 39 presets and the document bridge at
+452x705. External MIDI hardware and Android document-provider roundtrips were
+not repeated in this pass.

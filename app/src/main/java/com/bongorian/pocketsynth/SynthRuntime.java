@@ -31,6 +31,8 @@ final class SynthRuntime {
     private final AudioManager audio;
     private final AudioFocusRequest focus;
     boolean foreground, attached, ready, destroyed, focusAllowed = true;
+    volatile boolean editing;
+    String exportData;
 
     private SynthRuntime(Context app) {
         this.app = app;
@@ -43,7 +45,7 @@ final class SynthRuntime {
                 if (!focusAllowed) silence();
             }, handler).build();
         context = new MutableContextWrapper(app);
-        web = new WebView(context); web.setBackgroundColor(0xff171b19);
+        web = new WebView(context); web.setBackgroundColor(0xff151719);
         web.getSettings().setJavaScriptEnabled(true); web.getSettings().setDomStorageEnabled(true);
         web.getSettings().setAllowFileAccess(false); web.getSettings().setAllowContentAccess(false);
         web.getSettings().setMediaPlaybackRequiresUserGesture(false);
@@ -62,6 +64,22 @@ final class SynthRuntime {
             }
             @JavascriptInterface public void selectSource(String source) { handler.post(() -> midi.select(source)); }
         }, "AndroidMidi");
+        web.addJavascriptInterface(new Object() {
+            @JavascriptInterface public void editing(boolean value) { editing = value; }
+            @JavascriptInterface public void exportBank(String data) {
+                if (data == null || data.length() > 1048576) return;
+                handler.post(() -> {
+                    if (attached && context.getBaseContext() instanceof MainActivity)
+                        ((MainActivity) context.getBaseContext()).exportBank(data);
+                });
+            }
+            @JavascriptInterface public void importBank() {
+                handler.post(() -> {
+                    if (attached && context.getBaseContext() instanceof MainActivity)
+                        ((MainActivity) context.getBaseContext()).importBank();
+                });
+            }
+        }, "AndroidStudio");
         web.setWebViewClient(new WebViewClient() {
             @Override public void onPageFinished(WebView view, String url) { ready = true; midi.publish(); }
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) { return true; }

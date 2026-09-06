@@ -3,6 +3,8 @@ class SynthEngine {
   constructor() {
     this.ctx = null; this.voices = new Map(); this.live = new Set();
     this.maxVoices = 16; this.selectedPart = 0; this.masterVolume = .35;
+    this.soloPart = -1;
+    this.performanceControls = Array.from({length:16},()=>({bend:0,modulation:0}));
     this.defaults = { mode: 'analog', wave: 'sawtooth', table: 'basic', position: .3,
       fmRatio: 2, fmIndex: 2, fmDecay: .35, drive: 0, harmonics: 12, tilt: 1.4, even: .5,
       ringRatio: 2.5, ringMix: .8, kit: 'electro', drumTone: 0, drumDecay: 1,
@@ -46,7 +48,15 @@ class SynthEngine {
     if (values.level !== undefined) p.level = Math.max(0, Math.min(1.5, values.level));
     if (values.pan !== undefined) p.pan = Math.max(-1, Math.min(1, values.pan));
     if (values.mute !== undefined) p.mute = Boolean(values.mute);
-    if (p.bus) { this.smooth(p.bus.output.gain, p.mute ? 0 : p.level); this.smooth(p.bus.pan.pan, p.pan); }
+    if (p.bus) { this.smooth(p.bus.output.gain, p.mute || (this.soloPart >= 0 && this.soloPart !== index) ? 0 : p.level); this.smooth(p.bus.pan.pan, p.pan); }
+  }
+  solo(index) {
+    this.soloPart = this.soloPart === index ? -1 : index;
+    for(let i=0;i<16;i++)this.mixer(i,{});
+  }
+  perform(index, values) {
+    Object.assign(this.performanceControls[index],values);
+    for(const v of this.live)if(v.part===index){this.pitch(v,v.bend);this.controls(v,v.control);}
   }
   createBus(index) {
     const part = this.parts[index]; if (part.bus) return part.bus;
@@ -125,14 +135,15 @@ class SynthEngine {
   }
   pitch(v,cents=0) {
     v.bend=cents; if(v.oneshot)return;
-    v.osc.forEach((o,i)=>this.smooth(o.detune,cents+(i<2?(i?1:-1)*v.params.detune/2:0)));
-    if(v.mod)this.smooth(v.mod.detune,cents);
+    const total=cents+this.performanceControls[v.part].bend;
+    v.osc.forEach((o,i)=>this.smooth(o.detune,total+(i<2?(i?1:-1)*v.params.detune/2:0)));
+    if(v.mod)this.smooth(v.mod.detune,total);
   }
   expression(v,level) { this.smooth(v.expression.gain,level); }
   controls(v,control={}) {
     v.control={...control};
     if(v.filter)this.smooth(v.filter.frequency,control.cutoff ?? v.params.cutoff);
-    if(v.vibrato)this.smooth(v.vibrato.gain,v.params.lfoDepth+(control.modulation||0));
+    if(v.vibrato)this.smooth(v.vibrato.gain,v.params.lfoDepth+(control.modulation||0)+this.performanceControls[v.part].modulation);
   }
   reserve(index) {
     if(this.live.size<this.maxVoices)return;
@@ -142,7 +153,7 @@ class SynthEngine {
   noteOn(id,midi,time,velocity=1,index=this.selectedPart) {
     const existing=this.voices.get(id);
     if(existing) { if(existing.oneshot)this.dispose(existing); else return; }
-    if(this.parts[index].mute)return;
+    if(this.parts[index].mute || (this.soloPart >= 0 && this.soloPart !== index))return;
     this.init(); this.reserve(index);
     const c=this.ctx,p={...this.parts[index].params},b=this.createBus(index),t=time??c.currentTime;
     if(p.mode==='drums') { this.drum(id,midi,t,velocity,index,p,b); return; }
@@ -177,7 +188,7 @@ class SynthEngine {
     if(v.mod)vibrato.connect(v.mod.detune);
     this.register(v);
   }
-  register(v) { this.voices.set(v.id,v);this.live.add(v);v.osc[0].onended=()=>this.dispose(v); }
+  register(v) { this.voices.set(v.id,v);this.live.add(v);if(!v.oneshot){this.pitch(v,0);this.controls(v,{});}v.osc[0].onended=()=>this.dispose(v); }
   drum(id,midi,t,velocity,index,p,b) {
     const c=this.ctx,group=SynthEngine.drumGroup(midi),tune=Math.pow(2,p.drumTone/12)*(p.kit==='deep'?.82:1);
     if(group==='hat') for(const v of [...this.live]) if(v.part===index&&v.drumGroup==='hat')this.dispose(v);

@@ -2,11 +2,18 @@ plugins { id "com.android.application" }
 android {
     namespace "com.bongorian.pocketsynth"
     compileSdk 34
+    signingConfigs {
+        debug {
+            def existingKey = file(providers.gradleProperty('pocketDebugKeystore').getOrElse(
+                System.getProperty('user.home') + '/.config/.android/debug.keystore'))
+            if (existingKey.exists()) storeFile existingKey
+        }
+    }
     defaultConfig {
         applicationId "com.bongorian.pocketsynth"
         minSdk 26
         targetSdk 34
-        versionCode 3
-        versionName "3.0"
+        versionCode 4
+        versionName "4.0"
     }
 }

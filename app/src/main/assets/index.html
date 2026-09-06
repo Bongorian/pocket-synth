@@ -3,33 +3,37 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-  <meta name="theme-color" content="#171b19">
+  <meta name="theme-color" content="#151719">
   <title>Pocket Synth</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <main>
-  <header><div><span class="brand-mark">PS / 03</span><h1>Pocket Synth</h1></div><select id="edit-part" aria-label="編集・演奏チャンネル"></select><button id="panic" class="icon danger" title="全音停止 (Esc)" aria-label="全音停止"><img src="icons/square.svg" alt=""></button></header>
+  <header><div class="identity"><span class="brand-mark">PS</span><h1>Pocket Synth</h1></div><button id="undo" class="icon quiet" title="元に戻す" aria-label="元に戻す"><img src="icons/undo-2.svg" alt=""></button><button id="redo" class="icon quiet" title="やり直す" aria-label="やり直す"><img src="icons/redo-2.svg" alt=""></button><button id="project" class="icon quiet" title="バックアップ・設定" aria-label="バックアップ・設定"><img src="icons/settings-2.svg" alt=""></button><button id="panic" class="icon danger" title="全音停止 (Esc)" aria-label="全音停止"><img src="icons/square.svg" alt=""></button></header>
   <section class="patchbar" aria-label="音色">
-    <select id="preset" aria-label="音色"></select>
-    <select id="slot" aria-label="保存先"><option value="1">User 1</option><option value="2">User 2</option><option value="3">User 3</option><option value="4">User 4</option></select>
+    <select id="edit-part" aria-label="編集・演奏チャンネル"></select>
+    <select id="preset" aria-label="音色" hidden></select>
+    <button id="browse" class="patch-title" aria-label="音色ブラウザー"><span id="patch-engine">ANALOG</span><strong id="patch-name">Warm Keys</strong></button>
+    <button id="previous-preset" class="icon quiet" title="前の音色" aria-label="前の音色"><img src="icons/chevron-left.svg" alt=""></button><button id="next-preset" class="icon quiet" title="次の音色" aria-label="次の音色"><img src="icons/chevron-right.svg" alt=""></button>
+    <select id="slot" aria-label="保存先" hidden><option value="1">User 1</option><option value="2">User 2</option><option value="3">User 3</option><option value="4">User 4</option></select>
     <button id="save" class="icon" title="音色を保存" aria-label="音色を保存"><img src="icons/save.svg" alt=""></button>
   </section>
-  <section class="monitor" aria-label="波形モニター"><canvas id="scope"></canvas><div class="readout"><span id="note">READY</span><span id="status" role="status">16 VOICES</span></div></section>
-  <nav class="tabs" aria-label="音色編集"><button data-tab="tone" aria-selected="true" role="tab">音源</button><button data-tab="synthesis" aria-selected="false" role="tab">合成</button><button data-tab="env" aria-selected="false" role="tab">ADSR</button><button data-tab="fx" aria-selected="false" role="tab">FX</button><button data-tab="parts" aria-selected="false" role="tab">Parts</button><button data-tab="midi" aria-selected="false" role="tab">MIDI</button></nav>
-  <section id="tone" class="panel" role="tabpanel">
+  <section class="monitor" aria-label="波形モニター"><canvas id="scope"></canvas><div class="readout"><span id="note">READY</span><span id="status">16 VOICES</span></div><div class="monitor-tools"><button id="compare" title="編集前と比較" aria-pressed="false">A / B</button><button id="midi-shortcut">MIDI <span id="midi-light">OFF</span></button></div></section>
+  <nav class="tabs" role="tablist" aria-label="音色編集"><button data-tab="live" aria-selected="true" role="tab">LIVE</button><button data-tab="tone" aria-selected="false" role="tab">TONE</button><button data-tab="synthesis" aria-selected="false" role="tab">ENGINE</button><button data-tab="env" aria-selected="false" role="tab">ENV</button><button data-tab="fx" aria-selected="false" role="tab">FX</button><button data-tab="parts" aria-selected="false" role="tab">MIX</button><button data-tab="midi" aria-selected="false" role="tab">MIDI</button></nav>
+  <section id="live" class="panel" role="tabpanel"><div class="live-surface"><div id="xy" tabindex="0" role="slider" aria-label="フィルターXY" aria-valuemin="80" aria-valuemax="16000"><canvas id="xy-canvas"></canvas><span class="xy-label">FILTER / RESONANCE</span><output id="xy-value"></output></div><div id="live-controls" class="controls"></div></div></section>
+  <section id="tone" class="panel" role="tabpanel" hidden>
     <div class="wave-line"><select id="mode" aria-label="合成方式"><option value="analog">Analog</option><option value="fm">FM</option><option value="wavetable">Wavetable</option></select><select id="wave" aria-label="波形"><option value="sawtooth">Saw</option><option value="square">Square</option><option value="triangle">Triangle</option><option value="sine">Sine</option></select></div>
     <div class="controls" id="tone-controls"></div>
   </section>
   <section id="synthesis" class="panel" role="tabpanel" hidden><div class="wave-line"><select id="synth-mode" aria-label="合成方式"><option value="analog">Analog</option><option value="fm">FM</option><option value="wavetable">Wavetable</option></select><select id="table" aria-label="ウェーブテーブル"><option value="basic">Basic Morph</option><option value="vocal">Vocal</option><option value="metal">Metal</option></select><select id="kit" aria-label="ドラムキット" hidden><option value="electro">Electro</option><option value="deep">Deep</option><option value="dust">Dust</option></select></div><div class="controls" id="synthesis-controls"></div></section>
-  <section id="env" class="panel" role="tabpanel" hidden><div class="controls" id="env-controls"></div></section>
+  <section id="env" class="panel" role="tabpanel" hidden><canvas id="envelope" aria-label="ADSRエンベロープ"></canvas><div class="controls" id="env-controls"></div></section>
   <section id="fx" class="panel" role="tabpanel" hidden><div class="controls" id="fx-controls"></div></section>
   <section id="parts" class="panel" role="tabpanel" hidden>
     <div class="controls mix-controls">
       <label class="control"><span class="control-head"><span>Part Level</span><output id="part-level-out">100%</output></span><input id="part-level" type="range" min="0" max="1.5" value="1" step=".01"></label>
       <label class="control"><span class="control-head"><span>Pan</span><output id="part-pan-out">C</output></span><input id="part-pan" type="range" min="-1" max="1" value="0" step=".01"></label>
     </div>
-    <div class="part-head"><span>Ch</span><span>音色</span><span>Mute</span></div><div id="part-list"></div>
+    <div class="part-head"><span>Ch</span><span>音色</span><span>M</span><span>S</span></div><div id="part-list"></div>
   </section>
   <section id="midi" class="panel" role="tabpanel" hidden>
     <div class="midi-row"><label class="hold"><input type="checkbox" id="midi-enabled">MIDI受信</label><span id="midi-status" role="status">OFF</span></div>
@@ -38,9 +42,16 @@
     <div class="midi-row"><output id="midi-count">0 EVENTS</output><span id="midi-connection">Pocket Synth / MIDI In</span></div>
   </section>
   <section class="performance">
+    <div class="expression"><label>BEND<input id="bend" type="range" min="-200" max="200" step="1" value="0" aria-label="ピッチベンド"></label><label>MOD<input id="mod" type="range" min="0" max="50" step="1" value="0" aria-label="モジュレーション"></label><label>VEL<input id="velocity" type="range" min="1" max="127" step="1" value="100" aria-label="演奏ベロシティ"></label></div>
     <div class="transport"><div class="octaves"><button id="oct-down" class="icon" title="オクターブ下 (Z)" aria-label="オクターブ下"><img src="icons/minus.svg" alt=""></button><output id="octave">C3</output><button id="oct-up" class="icon" title="オクターブ上 (X)" aria-label="オクターブ上"><img src="icons/plus.svg" alt=""></button></div><label class="hold"><input id="hold" type="checkbox">Hold</label><label class="volume" for="volume"><img src="icons/volume-2.svg" alt="音量"><input id="volume" type="range" min="0" max="0.8" step="0.01" value="0.35" aria-label="音量"></label></div>
     <div id="keyboard" aria-label="鍵盤"></div>
+    <div id="notice" role="status" aria-live="polite">READY</div>
   </section>
 </main>
-<script src="engine.js"></script><script src="presets.js"></script><script src="midi.js"></script><script src="app.js"></script>
+<dialog id="browser"><div class="dialog-heading"><h2>Sound Library</h2><button class="icon quiet" data-close title="閉じる" aria-label="閉じる"><img src="icons/x.svg" alt=""></button></div><input id="preset-search" type="search" placeholder="音色を検索" aria-label="音色を検索"><div class="library-filters"><select id="preset-filter" aria-label="音源で絞り込み"><option value="all">All engines</option><option value="analog">Analog</option><option value="fm">FM</option><option value="wavetable">Wavetable</option><option value="additive">Additive</option><option value="ring">Ring Mod</option><option value="drums">Drums</option><option value="user">User</option></select><button id="favorites-only" class="icon" aria-pressed="false" title="お気に入りのみ" aria-label="お気に入りのみ"><img src="icons/star.svg" alt=""></button></div><div id="preset-results"></div></dialog>
+<dialog id="save-dialog"><div class="dialog-heading"><h2>Save Sound</h2><button class="icon quiet" data-close aria-label="閉じる"><img src="icons/x.svg" alt=""></button></div><label class="field">保存先<select id="save-slot"></select></label><label class="field">音色名<input id="save-name" maxlength="40" type="text"></label><button id="confirm-save" class="primary">保存</button></dialog>
+<dialog id="project-dialog"><div class="dialog-heading"><h2>Project</h2><button class="icon quiet" data-close aria-label="閉じる"><img src="icons/x.svg" alt=""></button></div><button id="export-bank" class="menu-action"><img src="icons/download.svg" alt="">バックアップを書き出す</button><button id="import-bank" class="menu-action"><img src="icons/upload.svg" alt="">バックアップを読み込む</button><button id="reset-performance" class="menu-action">Solo・Bend・Modを解除</button></dialog>
+<dialog id="import-dialog"><div class="dialog-heading"><h2>Restore Project</h2></div><p>16パートとユーザー音色を、バックアップの内容に置き換えます。</p><button id="confirm-import" class="primary">読み込む</button><button data-close>取消</button></dialog>
+<input id="bank-file" type="file" accept="application/json,.json" hidden>
+<script src="engine.js"></script><script src="presets.js"></script><script src="midi.js"></script><script src="app.js"></script><script src="studio.js"></script>
 </body></html>
