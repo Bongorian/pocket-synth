@@ -52,6 +52,10 @@ public class MainActivity extends Activity {
             .setType("application/json").addCategory(Intent.CATEGORY_OPENABLE)
             .putExtra(Intent.EXTRA_TITLE, "pocket-synth-bank.json"), 40);
     }
+    void importSample() {
+        startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT)
+            .setType("audio/*").addCategory(Intent.CATEGORY_OPENABLE), 42);
+    }
     void importBank() {
         startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT)
             .setType("*/*").addCategory(Intent.CATEGORY_OPENABLE), 41);
@@ -69,6 +73,30 @@ public class MainActivity extends Activity {
                 }
                 runtime.exportData = null;
                 runtime.js("window.studio?.notify('バックアップを書き出しました')");
+            } else if (request == 42) {
+                final android.net.Uri uri = data.getData();
+                new Thread(() -> {
+                    try (InputStream in = getContentResolver().openInputStream(uri);
+                         ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+                        byte[] buffer = new byte[4096]; int n;
+                        while ((n = in.read(buffer)) != -1) {
+                            out.write(buffer, 0, n);
+                            if (out.size() > 2097152) throw new java.io.IOException("Too large");
+                        }
+                        String encoded = android.util.Base64.encodeToString(out.toByteArray(), android.util.Base64.NO_WRAP);
+                        String name = "Imported audio";
+                        try (android.database.Cursor cursor = getContentResolver().query(uri, null, null, null, null)) {
+                            if (cursor != null && cursor.moveToFirst()) {
+                                int column = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME);
+                                if (column >= 0) name = cursor.getString(column);
+                            }
+                        }
+                        final String script = "window.synthImportSample(" + JSONObject.quote(encoded) + "," + JSONObject.quote(name) + ")";
+                        runtime.handler.post(() -> runtime.js(script));
+                    } catch (Exception error) {
+                        runtime.handler.post(() -> runtime.js("window.studio?.notify('音声を読み込めません（最大2 MB）')"));
+                    }
+                }, "PocketSampleImport").start();
             } else if (request == 41) {
                 try (InputStream in = getContentResolver().openInputStream(data.getData());
                      ByteArrayOutputStream out = new ByteArrayOutputStream()) {
@@ -76,7 +104,7 @@ public class MainActivity extends Activity {
                     int n;
                     while ((n = in.read(buffer)) != -1) {
                         out.write(buffer, 0, n);
-                        if (out.size() > 1048576) throw new java.io.IOException("Too large");
+                        if (out.size() > 8388608) throw new java.io.IOException("Too large");
                     }
                     runtime.js("window.studioImport(" + JSONObject.quote(out.toString("UTF-8")) + ")");
                 }

@@ -1,7 +1,7 @@
 'use strict';
 (() => {
   const clone = value => JSON.parse(JSON.stringify(value));
-  const engines = {analog:'ANALOG',fm:'FM',wavetable:'WAVETABLE',additive:'ADDITIVE',ring:'RING MOD',drums:'DRUM KIT'};
+  const engines = Object.fromEntries([...SynthEngines.entries].map(([id,e])=>[id,e.label]));
   const histories = Array.from({length:16},()=>({undo:[],redo:[],reference:null,comparing:false}));
   const partOctaves=synth.parts.map(p=>p.params.mode==='drums'?2:3);
   let names={}, favorites=new Set(), onlyFavorites=false, pendingImport=null, noticeTimer;
@@ -53,7 +53,7 @@
   document.querySelectorAll('dialog').forEach(d=>d.addEventListener('close',()=>{editMode();$('browse').blur();}));
   document.addEventListener('focusin',()=>{if(typing())releaseLocal();editMode();});
   document.addEventListener('focusout',()=>setTimeout(editMode,0));
-  const editIds=new Set([...Object.keys(specs),'wave','mode','synth-mode','table','kit']);
+  const editIds=new Set([...Object.keys(specs),'wave','mode','synth-mode','table','kit','sample-select']);
   document.addEventListener('pointerdown',e=>{if(editIds.has(e.target.id)&&e.target.type==='range')beforeEdit();},true);
   document.addEventListener('keydown',e=>{if(editIds.has(e.target.id)&&e.target.type==='range'&&['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End','PageUp','PageDown'].includes(e.key))beforeEdit();},true);
   document.addEventListener('change',e=>{if(editIds.has(e.target.id)&&e.target.tagName==='SELECT')beforeEdit();},true);
@@ -127,9 +127,9 @@
   new ResizeObserver(()=>{drawXY();drawEnvelope();}).observe(document.querySelector('main'));
   $('project').onclick=()=>openDialog('project-dialog');
   $('reset-performance').onclick=()=>{resetExpression();if(synth.soloPart>=0)synth.solo(synth.soloPart);refresh();$('project-dialog').close();notify('Solo / Bend / Mod を解除');};
-  function exportData(){return {format:'pocket-synth',version:4,users:clone(users),names:clone(names),favorites:[...favorites],selected:synth.selectedPart,volume:Number($('volume').value),parts:synth.parts.map(p=>({patch:clone(p.params),name:p.name,level:p.level,pan:p.pan,mute:p.mute,modified:!!p.modified}))};}
+  function exportData(){return {format:'pocket-synth',version:5,users:clone(users),names:clone(names),favorites:[...favorites],selected:synth.selectedPart,volume:Number($('volume').value),parts:synth.parts.map(p=>({patch:clone(p.params),name:p.name,level:p.level,pan:p.pan,mute:p.mute,modified:!!p.modified}))};}
   function validate(raw){
-    if(!raw||raw.format!=='pocket-synth'||raw.version!==4||!Array.isArray(raw.parts)||raw.parts.length!==16)throw Error('非対応のバックアップです');
+    if(!raw||raw.format!=='pocket-synth'||![4,5].includes(raw.version)||!Array.isArray(raw.parts)||raw.parts.length!==16)throw Error('非対応のバックアップです');
     const patch=p=>{if(!p||!engines[p.mode]||!Number.isFinite(p.cutoff))throw Error('音色データが不正です');return validPatch(p);};
     const bank={};for(let n=1;n<=16;n++){const id='User '+n;if(raw.users?.[id])bank[id]=patch(raw.users[id]);}
     const labels={};for(const id of Object.keys(bank))if(typeof raw.names?.[id]==='string')labels[id]=raw.names[id].slice(0,40);
@@ -141,8 +141,8 @@
     $('project-dialog').close();
   };
   $('import-bank').onclick=()=>{$('project-dialog').close();if(window.AndroidStudio)window.AndroidStudio.importBank();else $('bank-file').click();};
-  window.studioImport=text=>{try{if(text.length>1048576)throw Error('ファイルが大きすぎます');pendingImport=validate(JSON.parse(text));openDialog('import-dialog');}catch(e){notify(e.message||'読み込めません');}};
-  $('bank-file').onchange=async()=>{const file=$('bank-file').files[0];if(file){if(file.size>1048576)notify('ファイルが大きすぎます');else window.studioImport(await file.text());}$('bank-file').value='';};
+  window.studioImport=text=>{try{if(text.length>8388608)throw Error('ファイルが大きすぎます');pendingImport=validate(JSON.parse(text));openDialog('import-dialog');}catch(e){notify(e.message||'読み込めません');}};
+  $('bank-file').onchange=async()=>{const file=$('bank-file').files[0];if(file){if(file.size>8388608)notify('ファイルが大きすぎます');else window.studioImport(await file.text());}$('bank-file').value='';};
   $('confirm-import').onclick=()=>{
     if(!pendingImport)return;const b=pendingImport;
     const values={'pocket-synth-users':JSON.stringify(b.users),'pocket-synth-names':JSON.stringify(b.names),'pocket-synth-favorites':JSON.stringify(b.favorites),'pocket-synth-parts-v3':JSON.stringify(b)};

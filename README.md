@@ -1,134 +1,137 @@
-# Pocket Synth
+# Pocket Synth 5
 
-Offline Android synthesizer for Titan Slim, with a standalone browser version.
-Version 4 provides 16 MIDI parts, 16 shared voices, 39 factory presets and 16
-persistent user slots. Engines: subtractive, two-operator FM, morphable wavetable,
-additive, ring modulation and three synthesized drum kits. Each part has its own
-patch, filter, ADSR, vibrato, drive, delay, level, pan and mute; master volume and
-output compression are shared. No network or microphone permission.
-Audio uses the browser's native Web Audio nodes.
+Offline Android synthesizer with 16 MIDI parts, a shared 16-voice budget,
+75 factory presets, 16 named user slots and a browser interface. Eleven independent
+engine modules include all nine synthesis families below, plus ring modulation
+and synthesized drum kits. No network or microphone permission is required.
 
-## Play
+| Engine | Implementation | Main sound controls |
+| --- | --- | --- |
+| Virtual Analog | Two bandlimited oscillators and sine sub | Wave, detune, sub, filter |
+| Wavetable | Interpolation between five harmonic frames in three tables | Table, position |
+| FM | Two-operator frequency modulation with index envelope | Ratio, index, index decay |
+| PCM Sampler | Pitched mono PCM playback; built-in or imported audio | Root note, start, loop |
+| Additive | Up to 32 weighted harmonics | Harmonic count, tilt, even balance |
+| Physical Model | Karplus–Strong fractional-delay plucked string, rendered and cached per note | Damping, decay, pluck position |
+| Granular | Overlapping Hann-windowed sample grains in a two-second cyclic cloud | Grain size, density, position, spread, scan |
+| Spectral | Windowed 512-sample DFT analysis, partial remapping and bandlimited frozen-spectrum resynthesis | Freeze position, partial shift, tilt, blur |
+| Wave Sequence | Four wave oscillators with looping audio-rate crossfade control signals | Steps per second, blend, pattern |
+| Ring Mod | Carrier multiplied by a bipolar modulator | Ratio, wet mix |
+| Drum Kit | Synthesized kick, snare, hats, toms and percussion | Kit, tune, decay |
 
-- A W S E D F T G Y H U J K O L: chromatic notes from C to D, including sharps.
-- Z / X: octave down / up (C1 to C6).
-- Space: momentary sustain pedal. Hold: latched sustain.
-- Esc or the red square: stop all voices and clear delay.
-- Hardware volume buttons: Android media volume.
-- Save icon: choose a User 1-16 slot and a sound name; occupied slots show an overwrite action.
-- Header Ch selector: choose the part to edit and play with touch/physical keys.
-- Parts tab: assign sounds to all 16 channels; edit selected part level/pan and mute any part.
-- Touch supports multiple fingers and sliding between keys.
+Audio is rendered by native Web Audio nodes with an interactive latency hint;
+there is no JavaScript sample callback or timer driving ongoing playback.
+Sequence speed is independent of played pitch. Expensive prepared buffers are
+cached (24 buffers) and harmonic waves are cached (192 entries). Voice stealing
+includes release tails and prefers already released voices. Filter, drive, delay,
+mixer and LFO are shared per part where possible; master compression limits output.
+Latency depends on the Android WebView/audio route. No end-to-end latency or
+sustained thermal benchmark is claimed; this is not an AAudio/Oboe native DSP app.
 
-The Android activity forwards physical key down/up directly to the instrument.
-Octave changes do not change the pitch of keys already held. Leaving the app,
-losing audio focus, or hiding the browser stops sound. Android MIDI mode keeps
-MIDI playback alive when changing apps; local touch/keyboard notes still release.
-Maximum polyphony also
-includes release tails; the oldest released voice is stolen first.
+## Play and edit
 
-Open `app/src/main/assets/index.html` in a desktop browser, or install the APK.
-The first note enables browser audio. The Android build uses a local HTTPS origin
-served entirely from bundled assets; it does not run a server.
+- Touch keys support chords and sliding. Physical keys A W S E D F T G Y H U J K O L play chromatically; Z/X change octave.
+- Space is a momentary sustain pedal; Hold latches sustain. Esc or the red square stops voices and clears delays.
+- Choose a part with Ch, then choose its sound in Sound Library. Search, filter by engine, mark favorites and navigate previous/next sounds.
+- ENGINE shows only that engine's controls and an explanation in Japanese. TONE/ENV/FX edit the shared sound chain; LIVE provides filter XY and performance controls.
+- MIDI velocity, sustain, pitch bend and modulation remain independent per channel/source. Local bend/modulation controls are per part.
+- FX includes vibrato, filter LFO, tremolo, drive, delay and feedback. Filter LFO and tremolo use the same part LFO rate as vibrato.
+- MIX provides level, pan, mute, solo and sound assignment for all 16 parts.
+- Save stores a named user patch. Undo/Redo and A/B comparison cover current-session patch edits.
+- Project exports/imports a JSON bank including embedded user PCM. Maximum bank file size is 8 MiB; browser storage capacity can limit large collections.
 
-## Build
+PCM, physical and granular source settings are captured at note-on, as are
+sequence blend/pattern. Filters, expression, LFO and effects remain live for these
+engines; sequence speed and spectral processing controls also update held notes.
+A physical string naturally decays to silence within a maximum six-second buffer.
+Granular loops are prepared two-second clouds, not an unbounded streaming grain
+scheduler; transposition changes grain timing together with sample pitch.
+Spectral processing freezes one frame, not a continuous phase-vocoder effect or
+microphone processor. Wave sequences offer three four-step waveform patterns,
+not an arbitrary sample-sequence editor or external MIDI-clock sync.
 
-Run `./gradlew --offline --no-daemon assembleDebug` with the device's installed
-JDK 21, SDK 34, Gradle 8.10.2 and Debian ARM64 AAPT2. Output:
-`app/build/outputs/apk/debug/app-debug.apk`.
+## Samples and presets
 
-The debug build uses `~/.config/.android/debug.keystore` when present to preserve
-the installed app's signing identity. Override with
-`-PpocketDebugKeystore=/path/to/debug.keystore`; no signing key is stored in Git.
+ENGINE > 音声読込 imports an audio file using the Android document picker or
+browser file input. Audio must be 10 ms–2 seconds and no larger than 2 MiB. Formats
+are those decoded by the installed WebView/browser; WAV PCM is the test format.
+Audio is downmixed/resampled to mono 24 kHz / 16 bit and embedded in the patch.
+Set Root Note to the original recording pitch; the default is C4. PCM, granular
+and spectral engines share the sample selector. Selecting a built-in sample
+replaces the selected patch's imported sample. Saving/bank export includes sample data.
 
-References: https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API
-and https://developer.android.com/develop/ui/views/layout/webapps/webview
-Icons: Lucide, ISC license, vendored in `app/src/main/assets/icons`.
+The three built-in PCM sources (Pluck, Bell, Air) are original synthesized samples,
+not acoustic instrument recordings. No external sample library or download is needed.
 
-## Android MIDI
+Version 5 adds 36 presets (75 total): three each for analog, wavetable, FM and
+additive; four PCM sounds; and five each for physical, granular, spectral and
+wave sequence. Examples: VA Velvet Pad, FM Tine Studio, PCM Music Box, Model Nylon,
+Model Koto, Grain Bell Dust, Spectral Ghost Choir, Sequence Aurora.
 
-Enable MIDI reception on the MIDI tab first. A mediaPlayback foreground service
-retains the synth while another app is in front. Disable reception to stop it.
-In Orca-c Android, open F1 > MIDI Output, enable output and choose
-`Pocket Synth - MIDI In`. Do not choose the older Orca SF2 Synth port.
-USB class-compliant MIDI 1.0 output ports detected by Android are opened
-automatically; a port selector also exposes registered device outputs.
-Linux/ALSA and BLE scanning are outside this build's scope.
+## MIDI and Android
 
-Supported: note on/off (including velocity-zero), velocity, channel selection or
-Omni, CC64 sustain, CC7 volume, CC11 expression, pitch bend (default +/-2
-semitones), RPN 0 coarse bend range up to 24, CC120, CC121, CC123, system reset.
-CC1 controls vibrato depth; CC74 controls cutoff, independently per channel/source.
-Optional program change 0-38 selects a factory preset on the message's channel.
-The original first 12 program numbers are preserved. Patches and effects are
-per channel; assignments, edits and mixer settings persist automatically.
-This is not a GM melodic sound bank. No MIDI 2.0 UMP, SysEx patch
-loading, MPE, MIDI-clock sync or aftertouch assignment. Incoming MIDI is played
-on receipt; future timestamps are not a sample-accurate scheduling contract.
+Enable MIDI reception in the MIDI tab. Android MIDI mode uses a mediaPlayback
+foreground service so MIDI continues when another app is in front. Local touch
+and keyboard notes release when leaving the app. Focus loss stops sound.
 
-The MIDI byte framer is vendored AOSP code. USB hotplug closes only the removed
-source's voices. Virtual port closure stops app-source voices. MIDI-off clears
-voices and delay. Existing User 1-4 patches remain readable as Analog patches.
+USB class-compliant MIDI 1.0 output ports detected by Android open automatically.
+A source selector also exposes registered device outputs. Other apps can send
+to **Pocket Synth - MIDI In** (for example Orca-c Android).
 
-## Drums And New Engines
+Supported: note on/off, velocity-zero note off, channel selection/Omni, CC64,
+CC7, CC11, pitch bend, RPN 0 bend range up to 24 semitones, CC120/121/123,
+CC1 vibrato, CC74 cutoff, system reset, and optional Program Change 0–74.
+This is not a GM bank. No MIDI 2.0 UMP, MPE, SysEx patches, aftertouch assignment,
+BLE scanning, external clock sync or sample-accurate future MIDI timestamps.
+USB disconnect stops the removed source's voices. Physical USB hardware was not
+attached during v5 verification; the Android USB MIDI implementation remains present.
 
-Ch10 defaults to Electro Kit. Electro Kit, Deep Kit and Dust Kit can be assigned
-to any channel. Selecting a kit moves the local keyboard to C2 (MIDI note 36).
-Common GM percussion positions: 35/36 kick, 37 rim, 38/40 snare, 39 clap,
-42/44 closed/pedal hat, 46 open hat, 41/43/45/47/48/50 toms, 49 crash,
-51 ride and 56 cowbell. Other notes use related synthesized percussion or shaker;
-this is not a full GM drum sample library. Hats choke within their own part.
-Drums are one-shots: Note Off does not truncate them; panic/CC120 stops them.
-Drum Tune and Drum Decay shape the kit. Melodic ADSR/sub/detune/vibrato do not
-apply to percussion. Filter, drive, delay and mixer controls still apply.
+## Engine extension contract
 
-Additive exposes harmonic count, spectral tilt and even-harmonic balance.
-Ring Mod exposes carrier/modulator ratio and dry/wet balance for metallic tones.
+`app/src/main/assets/engines/registry.js` owns the registry. Each engine has its own
+file and calls `SynthEngines.register(id, descriptor)`. Descriptors expose:
 
-## Verification
+- `label`, `description`, `defaults`, `controls` and optional `sample` metadata.
+- `create(host, voice, time)` connects sources to `voice.filter` and starts them at the supplied audio time.
+- Optional `update(host, voice, changed)` handles parameters applicable to held notes.
 
-Install the test dependencies with `npm ci --prefix tools`. Browser tests use
-Chromium at `/usr/bin/chromium`; device tests use the local Android ADB endpoint
-`127.0.0.1:5555`. Run commands from the project root. Generated screenshots and
-device-session backups under `verification` are not included in the repository.
+Put pitched sources into `voice.osc`, non-pitched scheduled sources into
+`voice.auxSources`, and additional nodes into `voice.extra`. Connect pitch LFO to
+source detune where applicable. The host owns ADSR, MIDI controllers, pitch bend,
+effects, registration, voice stealing, note release and disposal. One-shot engines
+use `oneshot: true` and register their complete voice through the host (see drums).
 
-`node tools/verify.cjs`: keyboard, sustain, touch, persistence, pitch and layout.
-`node tools/verify-v2.cjs`: FM/WT rendered audio, channel isolation, controllers,
-RPN, disconnect, patch migration and all responsive tabs.
-`node tools/verify-v3.cjs`: all 39 preset renders, additive/ring spectra changes,
-drum families, channel-local programs/effects/controllers, voice budget, mute,
-hat choke, part persistence, User 16, stereo pan and responsive Parts/drum views.
-`node tools/verify-device.cjs`: Android key events and lifecycle, MIDI mode off.
-`node tools/verify-device-v3.cjs`: native WebView multipart audio, foreground
-service background playback and drum layout; restores the previous part settings.
-`tools/verify-orca.cjs`: with Orca Android configured and a one-shot bang below
-a MIDI operator, checks app-to-app MIDI, background FM samples and note release.
-USB hardware has not been attached for an end-to-end test.
-Orca integration was verified for v2; the v3 update does not repeat that test.
+Load the new script before `engine.js` in `index.html`, declare numeric parameter
+`specs` on the descriptor (the same shape as shared controls in `app.js`), and add factory patches in `presets.js`. Engine selectors,
+labels, visibility and library filters derive from registry metadata. The host does
+not dispatch synthesis through a list of mode-specific branches.
 
-## Version 4: Studio And Live Controls
+## Build and verification
 
-- Fixed keyboard and performance controls with a compact portrait layout and a separate landscape arrangement.
-- Sound Library with text search, engine filtering, favorites and previous/next patch buttons.
-- Named User 1-16 sounds. Existing v3 sounds and part assignments remain readable.
-- Per-part patch Undo/Redo (24 edits, current session) and A/B comparison. Comparing within one engine updates sounding voices; changing engines releases that part.
-- LIVE: filter/resonance XY control with logarithmic frequency, plus envelope controls or drum tune/decay.
-- Spring-return local pitch bend (+/-2 semitones), modulation and local-note velocity. MIDI input velocity and bend remain independent. Bend/Mod reset on part changes and leaving the app.
-- Sixteen touch drum pads for drum patches; physical keys retain their original chromatic mapping.
-- Part Solo, one-touch part selection and note activity indicators. Solo is temporary and preserves saved mute settings.
-- Native Android document picker for JSON bank export/import. Backups include all 16 parts, user sounds/names, favorites and master volume. Restore validates the bank and asks before replacing data.
-- Native keyboard input remains available in search/name dialogs, instead of triggering notes.
+Run `./gradlew --offline --no-daemon assembleDebug` with installed JDK 21, SDK 34,
+Gradle 8.10.2 and Debian ARM64 AAPT2. APK: `app/build/outputs/apk/debug/app-debug.apk`.
+Debug signing uses `~/.config/.android/debug.keystore` if present; override using
+`-PpocketDebugKeystore=/path/to/debug.keystore`.
 
-The app has no arpeggiator or external clock sync. XY edits the current patch;
-it does not override an external MIDI CC74 cutoff value already assigned to a voice.
-Solo suppresses new notes on other parts; it does not retrigger held notes when released.
-Patch Undo does not undo bank restore or changes to saved user slots.
+For browser playback, open `app/src/main/assets/index.html`. Android serves bundled
+assets through a local HTTPS WebView origin; no web server or hosting is used.
 
-`node tools/verify-v4.cjs` is the focused v4 check: six engine renders, solo and
-performance control isolation, patch browser, XY, undo/redo, A/B, named save/reload,
-backup restore/reload, and four viewport layouts including landscape and drum pads.
-Earlier UI verification scripts target their original versions' controls.
-V4 passed this focused check and was installed over the existing Android app;
-native startup confirmed v4, 16 parts, 39 presets and the document bridge at
-452x705. External MIDI hardware and Android document-provider roundtrips were
-not repeated in this pass.
+Run `npm ci --prefix tools` to install browser test dependencies, then:
+
+- `node tools/verify-v5.cjs`: all 75 preset audio renders, 11 engine lifecycles, parameter output changes, voice limit/panic, WAV decoding and sample save/reload, bank validation, engine filters and compact/landscape layouts.
+- `node tools/verify-v4.cjs`: shared studio controls, solo, MIDI bend isolation, XY, Undo/Redo, A/B, named save/reload, bank restore and four viewport sizes.
+- `node tools/verify-device-v5.cjs`: all 11 engines through the MIDI controller in the native WebView, source disconnect, multipart/background audio, native sample bridge and layout. This injects MIDI bytes into the WebView, not through an attached USB device.
+- Device utilities use Android ADB at `127.0.0.1:5555`; `tools/device-eval.cjs` evaluates code in the debug WebView.
+
+Earlier versioned UI scripts target their original controls. External USB hardware,
+end-to-end input-to-speaker latency and long-duration thermal behavior require
+separate hardware testing.
+
+Web Audio reference: https://webaudio.github.io/web-audio-api/
+Lucide icons and vendored AOSP MIDI byte framer licenses are listed in
+`THIRD_PARTY_NOTICES.md`.
+
+V5 was built and installed on the connected Android device. Device verification
+passed at 48 kHz; Web Audio reported 5.33 ms baseLatency (not input-to-speaker latency).
+Native document-provider file roundtrips and USB hardware were not exercised.
+Regenerate the original built-in PCM assets with `python3 tools/generate-samples.py`.

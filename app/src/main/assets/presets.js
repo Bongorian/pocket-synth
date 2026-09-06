@@ -41,3 +41,43 @@ window.FACTORY_PRESETS = {
   'Deep Kit': {mode:'drums',kit:'deep',cutoff:14000,mix:0,feedback:0,sub:0,drumDecay:1.4,drive:.5},
   'Dust Kit': {mode:'drums',kit:'dust',cutoff:6500,mix:.08,delay:.12,feedback:.12,sub:0,drumDecay:.85,drive:1.5}
 };
+
+// Engine collection: 36 additional factory patches (75 total).
+Object.assign(window.FACTORY_PRESETS, {
+  'VA Velvet Pad': {mode:'analog',wave:'triangle',detune:26,cutoff:2800,attack:.7,release:1.8,filterMod:850,lfoRate:.35,mix:.3},
+  'VA Neon Bass': {mode:'analog',wave:'square',detune:2,cutoff:900,resonance:4,sub:.7,attack:.004,release:.1,drive:1.3,mix:0},
+  'VA Prism Lead': {mode:'analog',detune:14,cutoff:6000,lfoDepth:7,filterMod:500,drive:.6},
+  'WT Amber Motion': {mode:'wavetable',table:'basic',position:.42,detune:18,filterMod:1700,lfoRate:.7,attack:.2,mix:.3},
+  'WT Formant Mist': {mode:'wavetable',table:'vocal',position:.62,sub:0,attack:1,release:2,lfoRate:.3,tremolo:.35,mix:.4},
+  'WT Digital Wire': {mode:'wavetable',table:'metal',position:.93,sub:0,attack:.003,decay:.3,sustain:.2,cutoff:12000},
+  'FM Tine Studio': {mode:'fm',fmRatio:1,fmIndex:4.5,fmDecay:.35,detune:0,sub:0,decay:1.2,sustain:.12,tremolo:.3,lfoRate:4,cutoff:10000},
+  'FM Crystal Rain': {mode:'fm',fmRatio:5.5,fmIndex:7,fmDecay:1.8,sub:0,attack:.003,decay:2,sustain:.05,release:1.5,cutoff:14000,mix:.35},
+  'FM Chrome Bass': {mode:'fm',fmRatio:.5,fmIndex:9,fmDecay:.12,sub:.5,cutoff:2000,drive:1.5,mix:0},
+  'PCM Studio Pluck': {mode:'pcm',sample:'pluck',sub:0,attack:.003,decay:1,sustain:.6,release:.4,cutoff:12000},
+  'PCM Music Box': {mode:'pcm',sample:'bell',sub:0,attack:.003,decay:1.5,sustain:.2,release:1,cutoff:14000,mix:.3},
+  'PCM Air Keys': {mode:'pcm',sample:'air',sampleLoop:1,sub:0,attack:.2,release:.8,cutoff:4500,tremolo:.2},
+  'PCM Dust Chord': {mode:'pcm',sample:'pluck',sampleStart:.12,sub:0,cutoff:1900,drive:1.2,release:.5,mix:.35},
+  'Additive Drawbars': {mode:'additive',harmonics:8,tilt:.7,even:.35,sub:.3,detune:0,attack:.004,sustain:1,release:.1,cutoff:12000},
+  'Additive Halo': {mode:'additive',harmonics:28,tilt:1.8,even:.4,detune:24,attack:.9,release:2,filterMod:1200,lfoRate:.4,mix:.35},
+  'Additive Ice': {mode:'additive',harmonics:32,tilt:.4,even:.8,sub:0,attack:.003,decay:.4,sustain:0,release:.3,cutoff:14000},
+  'Model Nylon': {mode:'physical',stringDamping:.55,stringDecay:1.8,pluckPoint:.23,sub:0,attack:.003,decay:1,sustain:.8,release:.3,cutoff:10000},
+  'Model Steel String': {mode:'physical',stringDamping:.1,stringDecay:2.8,pluckPoint:.12,sub:0,attack:.003,sustain:1,release:1,cutoff:14000,mix:.2},
+  'Model Muted Bass': {mode:'physical',stringDamping:.85,stringDecay:.7,pluckPoint:.4,sub:0,attack:.003,release:.1,cutoff:2000,mix:0},
+  'Model Koto': {mode:'physical',stringDamping:.2,stringDecay:1.4,pluckPoint:.08,sub:0,attack:.003,release:.6,cutoff:12000,mix:.28},
+  'Model Harp': {mode:'physical',stringDamping:.4,stringDecay:3,pluckPoint:.32,sub:0,attack:.005,release:1.5,cutoff:8000,mix:.3},
+  'Grain Cloud': {mode:'granular',sample:'air',grainSize:.15,grainDensity:32,grainSpread:.3,grainScan:.3,sub:0,attack:.6,release:1.8,cutoff:6500,mix:.35},
+  'Grain Bell Dust': {mode:'granular',sample:'bell',grainSize:.045,grainDensity:18,grainSpread:.7,grainScan:.8,sub:0,attack:.15,release:1,cutoff:14000,mix:.4},
+  'Grain Shards': {mode:'granular',sample:'pluck',grainSize:.02,grainDensity:8,grainPosition:.1,grainSpread:.1,grainScan:.2,sub:0,cutoff:9000,drive:.8},
+  'Grain Slow Glass': {mode:'granular',sample:'bell',grainSize:.2,grainDensity:36,grainPosition:.4,grainSpread:.2,grainScan:.1,sub:0,attack:1,release:2,mix:.3},
+  'Grain Air Swarm': {mode:'granular',sample:'air',grainSize:.065,grainDensity:44,grainSpread:1,grainScan:1,sub:0,filterMod:2000,lfoRate:.5,cutoff:5000},
+  'Spectral Frozen Bell': {mode:'spectral',sample:'bell',spectralPosition:.12,spectralShift:0,spectralBlur:.15,sub:0,detune:8,attack:.3,release:1.5,cutoff:12000,mix:.3},
+  'Spectral Ghost Choir': {mode:'spectral',sample:'air',spectralPosition:.5,spectralShift:-2,spectralTilt:-.3,spectralBlur:.8,sub:0,detune:22,attack:.8,release:2,cutoff:8000},
+  'Spectral Glass Shift': {mode:'spectral',sample:'pluck',spectralPosition:.05,spectralShift:7,spectralTilt:.3,sub:0,detune:0,attack:.01,release:.6,cutoff:15000,mix:.3},
+  'Spectral Dark Prism': {mode:'spectral',sample:'air',spectralShift:-6,spectralTilt:-.8,spectralBlur:.5,sub:.2,attack:.2,cutoff:3000,filterMod:1200,lfoRate:.4},
+  'Spectral Silver': {mode:'spectral',sample:'bell',spectralPosition:.35,spectralShift:3,spectralTilt:.8,spectralBlur:.4,sub:0,attack:.003,decay:.7,sustain:.1,release:.7,cutoff:14000},
+  'Sequence Aurora': {mode:'sequence',sequenceRate:2,sequenceBlend:.8,sequencePattern:0,sub:0,attack:.3,release:1,cutoff:7000,mix:.3},
+  'Sequence Pulse Train': {mode:'sequence',sequenceRate:8,sequenceBlend:.08,sequencePattern:1,sub:0,attack:.01,release:.2,cutoff:3500,drive:.8},
+  'Sequence Slow Tide': {mode:'sequence',sequenceRate:.5,sequenceBlend:1,sequencePattern:2,sub:0,attack:1,release:2,cutoff:4000,filterMod:1300,lfoRate:.25,mix:.4},
+  'Sequence Pixel Run': {mode:'sequence',sequenceRate:12,sequenceBlend:.15,sequencePattern:0,sub:0,attack:.003,release:.15,cutoff:11000,mix:.15},
+  'Sequence Soft Steps': {mode:'sequence',sequenceRate:3,sequenceBlend:.5,sequencePattern:2,sub:0,attack:.1,release:.5,cutoff:1800,tremolo:.2,lfoRate:1.5}
+});

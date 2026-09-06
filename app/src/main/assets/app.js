@@ -4,6 +4,26 @@ const $ = id => document.getElementById(id);
 const defaults = { ...synth.params };
 const factory = window.FACTORY_PRESETS;
 const specs = {
+  sampleRoot:['synthesis','Root Note',24,96,1,v=>noteName(Math.round(v))],
+  sampleStart:['synthesis','Sample Start',0,.95,.01,percent],
+  sampleLoop:['synthesis','Sample Loop',0,1,1,v=>v?'ON':'OFF'],
+  stringDamping:['synthesis','String Damping',0,1,.01,percent],
+  stringDecay:['synthesis','String Decay',.2,3,.05,seconds],
+  pluckPoint:['synthesis','Pluck Position',.05,.5,.01,percent],
+  grainSize:['synthesis','Grain Size',.015,.2,.005,seconds],
+  grainDensity:['synthesis','Grains / sec',4,48,1,v=>Math.round(v)+' /s'],
+  grainPosition:['synthesis','Grain Position',0,1,.01,percent],
+  grainSpread:['synthesis','Grain Spread',0,1,.01,percent],
+  grainScan:['synthesis','Grain Scan',0,1,.01,percent],
+  spectralPosition:['synthesis','Freeze Position',0,1,.01,percent],
+  spectralShift:['synthesis','Partial Shift',-12,12,1,v=>Math.round(v)+' bins'],
+  spectralTilt:['synthesis','Spectral Tilt',-1,1,.05,v=>v.toFixed(2)],
+  spectralBlur:['synthesis','Spectral Blur',0,1,.01,percent],
+  sequenceRate:['synthesis','Sequence Rate',.25,12,.25,v=>v.toFixed(2)+' steps/s'],
+  sequenceBlend:['synthesis','Step Blend',0,1,.01,percent],
+  sequencePattern:['synthesis','Wave Pattern',0,2,1,v=>['Rise','Pulse','Drift'][Math.round(v)]],
+  filterMod:['fx','Filter LFO',0,4800,20,v=>Math.round(v)+' Hz'],
+  tremolo:['fx','Tremolo',0,1,.01,percent],
   harmonics: ['synthesis', 'Harmonics', 1, 32, 1, v => String(Math.round(v))],
   tilt: ['synthesis', 'Harmonic Tilt', .3, 3, .05, v => v.toFixed(2)],
   even: ['synthesis', 'Even Harmonics', 0, 1, .01, percent],
@@ -30,6 +50,7 @@ const specs = {
   lfoRate: ['fx', 'Vibrato Rate', .1, 12, .1, v => v.toFixed(1) + ' Hz'],
   lfoDepth: ['fx', 'Vibrato Depth', 0, 50, 1, v => v + ' ct']
 };
+for(const engine of SynthEngines.entries.values())Object.assign(specs,engine.specs||{});
 function percent(v) { return Math.round(v * 100) + '%'; }
 function seconds(v) { return v < 1 ? Math.round(v * 1000) + ' ms' : v.toFixed(2) + ' s'; }
 let users = {}, octave = 3, space = false, basePreset = 'Warm Keys', modified = false;
@@ -41,7 +62,12 @@ function validPatch(raw) {
   if (!raw || typeof raw !== 'object') return null;
   const p = { ...defaults };
   if (['sine', 'triangle', 'sawtooth', 'square'].includes(raw.wave)) p.wave = raw.wave;
-  if (['analog', 'fm', 'wavetable', 'additive', 'ring', 'drums'].includes(raw.mode)) p.mode = raw.mode;
+  if (SynthEngines.entries.has(raw.mode)) p.mode = raw.mode;
+  if (['pluck','bell','air'].includes(raw.sample)) p.sample=raw.sample;
+  if(typeof raw.sampleData==='string'&&raw.sampleData.length<=128000&&raw.sampleData.length%4===0&&/^[A-Za-z0-9+/]*={0,2}$/.test(raw.sampleData)) {
+    try {const n=atob(raw.sampleData).length;if(n%2===0)p.sampleData=raw.sampleData;}catch(_){}
+  }
+  if(typeof raw.sampleName==='string')p.sampleName=raw.sampleName.slice(0,60);
   if (['electro','deep','dust'].includes(raw.kit)) p.kit=raw.kit;
   if (['basic', 'vocal', 'metal'].includes(raw.table)) p.table = raw.table;
   for (const [id, s] of Object.entries(specs)) {
@@ -53,9 +79,11 @@ try {
   const data = JSON.parse(localStorage.getItem('pocket-synth-users') || '{}');
   for (let i = 1; i <= 16; i++) { const p = validPatch(data?.['User ' + i]); if (p) users['User ' + i] = p; }
 } catch (_) {}
-for(const id of ['mode','synth-mode']) for(const [value,name] of [['additive','Additive'],['ring','Ring Mod'],['drums','Drum Kit']]) {
-  const o=document.createElement('option');o.value=value;o.textContent=name;$(id).append(o);
+for(const id of ['mode','synth-mode']) {
+  $(id).replaceChildren();
+  for(const [value,engine] of SynthEngines.entries){const o=document.createElement('option');o.value=value;o.textContent=engine.label;$(id).append(o);}
 }
+for(const [value,engine] of SynthEngines.entries){if($('preset-filter').querySelector('[value="'+value+'"]'))continue;const o=document.createElement('option');o.value=value;o.textContent=engine.label;$('preset-filter').append(o);}
 for(let i=5;i<=16;i++){const o=document.createElement('option');o.value=i;o.textContent='User '+i;$('slot').append(o);}
 let persistTimer;
 function persistParts() {
@@ -127,13 +155,18 @@ function sync() {
   $('synth-mode').value = synth.params.mode;
   for (const id of ['fmRatio', 'fmIndex', 'fmDecay']) $(id).disabled = synth.params.mode !== 'fm';
   $('table').disabled = $('position').disabled = synth.params.mode !== 'wavetable';
-  const groups={fm:['fmRatio','fmIndex','fmDecay'],wavetable:['position'],additive:['harmonics','tilt','even'],ring:['ringRatio','ringMix'],drums:['drumTone','drumDecay']};
-  for(const [mode,ids] of Object.entries(groups))for(const id of ids)$(id).closest('.control').hidden=synth.params.mode!==mode;
-  $('table').hidden=synth.params.mode==='drums';$('kit').hidden=synth.params.mode!=='drums';$('kit').value=synth.params.kit;
+  const engine=SynthEngines.get(synth.params.mode);
+  for(const [id,s] of Object.entries(specs))if(s[0]==='synthesis')$(id).closest('.control').hidden=!(engine.controls||[]).includes(id);
+  $('engine-description').textContent=engine.description||'';
+  $('sample-tools').hidden=!engine.sample;$('sample-select').value=synth.params.sample;
+  $('sample-name').textContent=synth.params.sampleData?(synth.params.sampleName||'User sample'):'内蔵 PCM · C4';
+  $('table').hidden=synth.params.mode!=='wavetable';$('kit').hidden=synth.params.mode!=='drums';$('kit').value=synth.params.kit;
   const part=synth.parts[synth.selectedPart];$('edit-part').value=synth.selectedPart;
   $('part-level').value=part.level;$('part-level-out').textContent=percent(part.level);
   $('part-pan').value=part.pan;$('part-pan-out').textContent=part.pan===0?'C':(part.pan<0?'L ':'R ')+Math.round(Math.abs(part.pan)*100);
   for(const id of ['detune','sub','attack','decay','sustain','release','lfoRate','lfoDepth'])$(id).disabled=synth.params.mode==='drums';
+  $('detune').disabled=!['analog','fm','wavetable','additive','ring','spectral'].includes(synth.params.mode);
+  $('sub').disabled=!['analog','fm','wavetable','additive','ring','spectral'].includes(synth.params.mode);
   window.studio?.refresh();
 }
 function markModified() {

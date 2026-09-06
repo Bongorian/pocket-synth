@@ -67,10 +67,16 @@ final class SynthRuntime {
         web.addJavascriptInterface(new Object() {
             @JavascriptInterface public void editing(boolean value) { editing = value; }
             @JavascriptInterface public void exportBank(String data) {
-                if (data == null || data.length() > 1048576) return;
+                if (data == null || data.length() > 8388608) return;
                 handler.post(() -> {
                     if (attached && context.getBaseContext() instanceof MainActivity)
                         ((MainActivity) context.getBaseContext()).exportBank(data);
+                });
+            }
+            @JavascriptInterface public void importSample() {
+                handler.post(() -> {
+                    if (attached && context.getBaseContext() instanceof MainActivity)
+                        ((MainActivity) context.getBaseContext()).importSample();
                 });
             }
             @JavascriptInterface public void importBank() {
